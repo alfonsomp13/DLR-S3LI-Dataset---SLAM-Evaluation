@@ -1,0 +1,287 @@
+# DLR S3LI Dataset - SLAM Evaluation Docker Environment
+
+This Docker environment reproduces the results from the paper:
+**"Challenges of SLAM in Extremely Unstructured Environments: The DLR Planetary Stereo, Solid-State LiDAR, Inertial Dataset"**
+by Giubilato et al., IEEE RA-L 2022
+
+## Dataset Information
+
+The S3LI dataset was recorded on Mt. Etna, Sicily, a planetary analogous environment with:
+- **7 sequences** covering over 4 kilometers
+- **Stereo camera** (AVT Mako, 688×512 pixels, 30 Hz)
+- **Solid-State LiDAR** (Blickfeld Cube-1, 70°H × 30°V FOV, 4.7 Hz)
+- **IMU** (XSens MTi-G 10, 400 Hz)
+- **D-GNSS ground truth** (centimeter-level accuracy)
+
+Dataset URL: https://datasets.arches-projekt.de/s3li_dataset/
+
+## Quick Start
+
+### 1. Build and Run Container
+
+```bash
+chmod +x run_s3li_evaluation.sh
+./run_s3li_evaluation.sh
+```
+
+This will:
+- Build the Docker image with all SLAM systems
+- Start a persistent container (won't close, maintains static ID)
+- Mount directories for dataset and results
+
+### 2. Access Container
+
+```bash
+docker exec -it s3li_slam_eval bash
+```
+
+### 3. Download Dataset
+
+Inside the container:
+```bash
+bash /workspace/scripts/download_dataset.sh
+```
+
+You can select individual sequences or download all (~50GB total).
+
+### 4. Run Evaluations
+
+```bash
+bash /workspace/scripts/run_evaluation.sh
+```
+
+This will:
+- Run all SLAM algorithms on selected sequences
+- Compute normalized RMSE and completion ratios
+- Generate Table III comparison from the paper
+
+## SLAM Systems Included
+
+The following SLAM systems are pre-built in the container:
+
+1. **ORB-SLAM3** (Stereo & Stereo-Inertial)
+2. **VINS-Fusion** (Stereo & Stereo-Inertial)  
+3. **OpenVINS** (Stereo-Inertial)
+4. **BASALT** (Stereo-Inertial)
+
+## Sequences
+
+| Sequence | Length | Description |
+|----------|--------|-------------|
+| s3li_traverse_1 | 371 m | Ash slope traverse, severe visual aliasing |
+| s3li_traverse_2 | 300 m | Short traverse with panning motions |
+| s3li_crater | 1010 m | Long traverse around crater rim |
+| s3li_loops | 587 m | Loop closure opportunities on rocky ridges |
+| s3li_crater_inout | 1338 m | Long traverse in/out of crater |
+| s3li_mapping | 242 m | Dense mapping area |
+| s3li_landmarks | 482 m | Traverses between rock formations |
+
+## Directory Structure
+
+```
+/workspace/
+├── dataset/              # Dataset storage
+│   ├── s3li_traverse_1/
+│   ├── s3li_traverse_2/
+│   └── ...
+├── results/              # Evaluation results
+│   ├── orbslam3_stereo/
+│   ├── vins_fusion_stereo/
+│   └── ...
+├── scripts/              # Evaluation scripts
+│   ├── download_dataset.sh
+│   ├── run_evaluation.sh
+│   ├── evaluate_trajectory.py
+│   └── generate_table.py
+├── configs/              # SLAM configuration files
+├── ORB_SLAM3/           # ORB-SLAM3 source
+├── catkin_ws/           # ROS workspace (VINS, OpenVINS)
+└── basalt/              # BASALT source
+```
+
+## Output Files
+
+After running evaluations, results are saved to `/workspace/results/`:
+
+- `evaluation_<sequence>.csv` - Per-sequence results
+- `table_iii_comparison.csv` - Main comparison table
+- `table_iii_comparison_detailed.csv` - Detailed statistics
+- `<system>/<sequence>/trajectory.txt` - Estimated trajectories
+- `<system>/<sequence>/output.log` - System logs
+
+## Reproducing Table III
+
+To reproduce Table III from the paper:
+
+```bash
+# Inside container
+bash /workspace/scripts/run_evaluation.sh
+
+# Select option: Run all sequences (option 8)
+# Wait for completion (may take several hours)
+
+# Results will be in:
+cat /workspace/results/table_iii_comparison.csv
+```
+
+## Manual Evaluation
+
+To run individual SLAM systems manually:
+
+### ORB-SLAM3 (Stereo)
+```bash
+cd /workspace/ORB_SLAM3
+./Examples/Stereo/stereo_euroc \
+    Vocabulary/ORBvoc.txt \
+    /workspace/configs/orbslam3_config.yaml \
+    /workspace/dataset/s3li_traverse_1 \
+    timestamps.txt
+```
+
+### VINS-Fusion
+```bash
+cd /workspace/catkin_ws
+source devel/setup.bash
+roslaunch vins vins_rviz.launch
+# In another terminal: play dataset
+```
+
+### OpenVINS
+```bash
+cd /workspace/catkin_ws
+source devel/setup.bash
+roslaunch ov_msckf pgeneva_ros_eth.launch
+```
+
+### BASALT
+```bash
+cd /workspace/basalt/build
+./basalt_vio \
+    --dataset-path /workspace/dataset/s3li_traverse_1 \
+    --config-path /workspace/configs/basalt_config.json \
+    --save-trajectory
+```
+
+## Container Management
+
+### Stop Container
+```bash
+docker stop s3li_slam_eval
+```
+
+### Restart Container
+```bash
+docker start s3li_slam_eval
+docker exec -it s3li_slam_eval bash
+```
+
+### View Container Logs
+```bash
+docker logs -f s3li_slam_eval
+```
+
+### Get Container ID
+```bash
+docker ps -qf "name=s3li_slam_eval"
+```
+
+The container is configured with `--restart unless-stopped`, ensuring it maintains a static ID and survives system reboots.
+
+### Remove Container
+```bash
+docker stop s3li_slam_eval
+docker rm s3li_slam_eval
+```
+
+### Remove Image
+```bash
+docker rmi s3li_slam:latest
+```
+
+## Configuration
+
+Configuration files for each SLAM system are in `/workspace/configs/`. 
+Adjust these to modify algorithm parameters:
+
+- `orbslam3_config.yaml` - ORB-SLAM3 parameters
+- `vins_config.yaml` - VINS-Fusion parameters
+- `openvins_config.yaml` - OpenVINS parameters  
+- `basalt_config.json` - BASALT parameters
+
+## Evaluation Metrics
+
+As described in the paper, the evaluation computes:
+
+1. **Normalized RMSE**: RMSE / trajectory_length
+   - Accounts for different trajectory lengths
+   - Lower is better
+
+2. **Completion Ratio**: estimated_length / groundtruth_length
+   - Indicates how much of the sequence was successfully processed
+   - Higher is better (100% = complete sequence)
+
+Results are formatted as: `RMSE (Completion%)`
+
+## Key Findings from Paper
+
+The paper demonstrates that:
+- Severe visual aliasing challenges place recognition
+- Lack of structural features limits LiDAR-only SLAM
+- Stereo-inertial systems show best overall performance
+- ORB-SLAM3 struggles with feature-poor environments
+- OpenVINS and BASALT are more robust to aliasing
+
+## Troubleshooting
+
+### Dataset download fails
+- Check network connectivity
+- Verify dataset URL is accessible
+- Try downloading individual sequences
+
+### SLAM system crashes
+- Check system logs in `results/<system>/<sequence>/output.log`
+- Verify sufficient memory (8GB+ recommended)
+- Adjust parameters in config files
+
+### ROS issues
+```bash
+source /opt/ros/noetic/setup.bash
+source /workspace/catkin_ws/devel/setup.bash
+```
+
+### Build errors
+Container includes pre-built systems, but to rebuild:
+```bash
+cd /workspace/ORB_SLAM3
+./build.sh
+
+cd /workspace/catkin_ws
+catkin_make
+```
+
+## Citation
+
+If you use this dataset or code, please cite:
+
+```bibtex
+@article{giubilato2022challenges,
+  title={Challenges of SLAM in Extremely Unstructured Environments: The DLR Planetary Stereo, Solid-State LiDAR, Inertial Dataset},
+  author={Giubilato, Riccardo and St{\"u}rzl, Wolfgang and Wedler, Armin and Triebel, Rudolph},
+  journal={IEEE Robotics and Automation Letters},
+  volume={7},
+  number={4},
+  pages={8721--8728},
+  year={2022},
+  publisher={IEEE}
+}
+```
+
+## Contact
+
+For dataset issues: https://rmc.dlr.de/s3li_dataset
+For paper questions: riccardo.giubilato@dlr.de
+
+## License
+
+Dataset and code are provided for research purposes. 
+See individual SLAM system licenses for their respective terms.
