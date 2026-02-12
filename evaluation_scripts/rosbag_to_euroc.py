@@ -42,8 +42,9 @@ def main() -> int:
         print(f"Bag not found: {args.bag}", file=sys.stderr)
         return 1
 
-    cam0_data = os.path.join(args.out, "cam0", "data")
-    cam1_data = os.path.join(args.out, "cam1", "data")
+    # EuRoC layout expected by ORB-SLAM3: <out>/mav0/cam0/data and <out>/mav0/cam1/data
+    cam0_data = os.path.join(args.out, "mav0", "cam0", "data")
+    cam1_data = os.path.join(args.out, "mav0", "cam1", "data")
     ensure_dir(cam0_data)
     ensure_dir(cam1_data)
 
@@ -77,8 +78,8 @@ def main() -> int:
     left_rows.sort(key=lambda x: x[0])
     right_rows.sort(key=lambda x: x[0])
 
-    write_csv(os.path.join(args.out, "cam0", "data.csv"), left_rows)
-    write_csv(os.path.join(args.out, "cam1", "data.csv"), right_rows)
+    write_csv(os.path.join(args.out, "mav0", "cam0", "data.csv"), left_rows)
+    write_csv(os.path.join(args.out, "mav0", "cam1", "data.csv"), right_rows)
 
     with open(os.path.join(args.out, "timestamps.txt"), "w", encoding="utf-8") as f:
         for ts_ns, _ in left_rows:
