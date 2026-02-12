@@ -27,6 +27,15 @@ RUN apt-get update && apt-get install -y \
     libatlas-base-dev \
     libpcl-dev \
     libyaml-cpp-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    libglew-dev \
+    libepoxy-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
     vim \
     htop \
     tmux \
@@ -60,11 +69,28 @@ RUN pip3 install --upgrade pip && \
 # Set up workspace
 WORKDIR /workspace
 
+# Build Pangolin (required by ORB-SLAM3)
+ARG PANGOLIN_COMMIT=master
+RUN git clone https://github.com/stevenlovegrove/Pangolin.git /tmp/Pangolin && \
+    cd /tmp/Pangolin && \
+    git checkout ${PANGOLIN_COMMIT} && \
+    sed -i 's/-Werror//g' CMakeLists.txt && \
+    sed -i 's/-Werror=maybe-uninitialized//g' CMakeLists.txt && \
+    sed -i 's/-Werror=vla//g' CMakeLists.txt && \
+    sed -i 's/-Wno-null-pointer-arithmetic//g' CMakeLists.txt && \
+    sed -i 's/-Wno-null-pointer-subtraction//g' CMakeLists.txt && \
+    sed -i 's/-Wno-deprecated-register//g' components/pango_image/CMakeLists.txt && \
+    rm -rf build && mkdir build && cd build && \
+    cmake .. -DBUILD_PANGO_IMAGE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TOOLS=OFF && \
+    make -j4 && make install && ldconfig && \
+    rm -rf /tmp/Pangolin
+
 # Build ORB-SLAM3
 RUN git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git && \
     cd ORB_SLAM3 && \
     chmod +x build.sh && \
     sed -i 's/march=native/march=x86-64/g' CMakeLists.txt && \
+    sed -i 's/OpenCV 4.4/OpenCV 4.2/' CMakeLists.txt && \
     ./build.sh || true
 
 # Build VINS-Fusion
@@ -85,7 +111,6 @@ RUN cd catkin_ws/src && \
 # Build Basalt (VIO system)
 RUN apt-get update && apt-get install -y \
     libtbb-dev \
-    libglew-dev \
     libfmt-dev \
     && rm -rf /var/lib/apt/lists/*
 

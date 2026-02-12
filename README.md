@@ -55,6 +55,23 @@ This will:
 - Compute normalized RMSE and completion ratios
 - Generate Table III comparison from the paper
 
+## Build Notes (ORB-SLAM3 + Pangolin)
+
+The Docker image now builds Pangolin from source and relaxes strict warning flags so ORB-SLAM3 compiles reliably with OpenCV 4.2 on Ubuntu 20.04.
+
+If you need to rebuild ORB-SLAM3 **inside the container** (for example after changing configs), run:
+
+```bash
+cd /workspace/ORB_SLAM3
+./build.sh
+```
+
+If the build fails with `PangolinConfig.cmake not found`, it means Pangolin was not installed correctly in the image. Rebuild the Docker image from the host to restore Pangolin and ORB-SLAM3:
+
+```bash
+docker build -t s3li_slam:latest .
+```
+
 ## SLAM Systems Included
 
 The following SLAM systems are pre-built in the container:
