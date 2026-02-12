@@ -155,6 +155,17 @@ cd /workspace/ORB_SLAM3
     timestamps.txt
 ```
 
+### Convert rosbag -> EuRoC (for ORB-SLAM3)
+If your dataset is in ROS1 bag format, convert it to EuRoC before running `stereo_euroc`:
+
+```bash
+python3 /workspace/scripts/rosbag_to_euroc.py \
+  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
+  --left /stereo/left/image_rect \
+  --right /stereo/right/image_rect \
+  --out /workspace/dataset/converted/s3li_traverse_1
+```
+
 ### VINS-Fusion
 ```bash
 cd /workspace/catkin_ws

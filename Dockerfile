@@ -70,16 +70,18 @@ RUN pip3 install --upgrade pip && \
 WORKDIR /workspace
 
 # Build Pangolin (required by ORB-SLAM3)
-ARG PANGOLIN_COMMIT=master
+ARG PANGOLIN_COMMIT=v0.6
 RUN git clone https://github.com/stevenlovegrove/Pangolin.git /tmp/Pangolin && \
     cd /tmp/Pangolin && \
     git checkout ${PANGOLIN_COMMIT} && \
-    sed -i 's/-Werror//g' CMakeLists.txt && \
     sed -i 's/-Werror=maybe-uninitialized//g' CMakeLists.txt && \
     sed -i 's/-Werror=vla//g' CMakeLists.txt && \
+    sed -i 's/=maybe-uninitialized//g' CMakeLists.txt && \
+    sed -i 's/=vla//g' CMakeLists.txt && \
+    sed -i 's/-Werror//g' CMakeLists.txt && \
     sed -i 's/-Wno-null-pointer-arithmetic//g' CMakeLists.txt && \
     sed -i 's/-Wno-null-pointer-subtraction//g' CMakeLists.txt && \
-    sed -i 's/-Wno-deprecated-register//g' components/pango_image/CMakeLists.txt && \
+    if [ -f components/pango_image/CMakeLists.txt ]; then sed -i 's/-Wno-deprecated-register//g' components/pango_image/CMakeLists.txt; fi && \
     rm -rf build && mkdir build && cd build && \
     cmake .. -DBUILD_PANGO_IMAGE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TOOLS=OFF && \
     make -j4 && make install && ldconfig && \
