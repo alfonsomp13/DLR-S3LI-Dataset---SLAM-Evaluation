@@ -41,6 +41,10 @@ echo "Starting container..."
 docker run -d \
     --name $CONTAINER_NAME \
     --restart unless-stopped \
+    -e DISPLAY=${DISPLAY} \
+    -e LIBGL_ALWAYS_SOFTWARE=1 \
+    -e QT_X11_NO_MITSHM=1 \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v $(pwd)/$DATASET_DIR:/workspace/dataset \
     -v $(pwd)/$RESULTS_DIR:/workspace/results \
     -v $(pwd)/configs:/workspace/configs \

@@ -28,6 +28,32 @@ This will:
 - Build the Docker image with all SLAM systems
 - Start a persistent container (won't close, maintains static ID)
 - Mount directories for dataset and results
+- Enable X11 forwarding for viewer-based SLAM runs
+
+If you plan to use the ORB-SLAM3 viewer, allow local X11 access on the host:
+
+```bash
+xhost +local:root
+```
+
+If you are on a remote host, ensure `DISPLAY` is set correctly before running the container:
+
+```bash
+echo $DISPLAY
+```
+
+For headless/limited OpenGL environments, force software rendering:
+
+```bash
+export LIBGL_ALWAYS_SOFTWARE=1
+export QT_X11_NO_MITSHM=1
+```
+
+If you encounter `free(): invalid pointer` crashes during optimization, rebuild the image. The Dockerfile pins Eigen alignment settings for stability in g2o:
+
+```
+-DEIGEN_DONT_ALIGN_STATICALLY -DEIGEN_DONT_VECTORIZE
+```
 
 ### 2. Access Container
 
@@ -145,6 +171,28 @@ cat /workspace/results/table_iii_comparison.csv
 
 To run individual SLAM systems manually:
 
+### 0) Prepare ORB-SLAM3 inputs (required)
+
+#### A) Convert rosbag -> EuRoC (stereo sync)
+```bash
+python3 /workspace/scripts/rosbag_to_euroc.py \
+  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
+  --left /stereo/left/image_rect \
+  --right /stereo/right/image_rect \
+  --out /workspace/dataset/converted/s3li_traverse_1
+```
+
+#### B) Generate ORB-SLAM3 config from camera_info (headless-ready)
+```bash
+python3 /workspace/scripts/generate_orbslam_config_from_bag.py \
+  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
+  --left-info /stereo/left/camera_info \
+  --right-info /stereo/right/camera_info \
+  --fps 30 \
+  --out /workspace/configs/orbslam_config_headless.yaml \
+  --viewer 0
+```
+
 ### ORB-SLAM3 (Stereo)
 ```bash
 cd /workspace/ORB_SLAM3
@@ -155,29 +203,7 @@ xvfb-run -a ./Examples/Stereo/stereo_euroc \
     /workspace/dataset/converted/s3li_traverse_1/timestamps.txt
 ```
 
-### Convert rosbag -> EuRoC (for ORB-SLAM3)
-If your dataset is in ROS1 bag format, convert it to EuRoC before running `stereo_euroc`:
-
-```bash
-python3 /workspace/scripts/rosbag_to_euroc.py \
-  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
-  --left /stereo/left/image_rect \
-  --right /stereo/right/image_rect \
-  --out /workspace/dataset/converted/s3li_traverse_1
-```
-
-### Create a headless ORB-SLAM3 config (from rosbag camera_info)
-The dataset does not ship a valid ORB-SLAM3 config. Generate one from the rosbag camera_info topics and disable the viewer for headless runs:
-
-```bash
-python3 /workspace/scripts/generate_orbslam_config_from_bag.py \
-  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
-  --left-info /stereo/left/camera_info \
-  --right-info /stereo/right/camera_info \
-  --fps 30 \
-  --out /workspace/configs/orbslam_config_headless.yaml \
-  --viewer 0
-```
+If you want the GUI viewer, run inside the container **without** `xvfb-run` and set `Viewer: 1` in the config. Note that some setups crash during viewer teardown; results are still written to disk.
 
 ### VINS-Fusion
 ```bash

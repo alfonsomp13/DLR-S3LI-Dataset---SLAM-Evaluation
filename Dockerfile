@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     libxcursor-dev \
     libxi-dev \
     xvfb \
+    gdb \
     vim \
     htop \
     tmux \
@@ -94,6 +95,7 @@ RUN git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git && \
     chmod +x build.sh && \
     sed -i 's/march=native/march=x86-64/g' CMakeLists.txt && \
     sed -i 's/OpenCV 4.4/OpenCV 4.2/' CMakeLists.txt && \
+    sed -i '/add_definitions(-DCOMPILEDWITHC11)/a add_definitions(-DEIGEN_DONT_ALIGN_STATICALLY -DEIGEN_DONT_VECTORIZE)' CMakeLists.txt && \
     ./build.sh || true
 
 # Build VINS-Fusion

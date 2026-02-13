@@ -78,11 +78,19 @@ def main() -> int:
     left_rows.sort(key=lambda x: x[0])
     right_rows.sort(key=lambda x: x[0])
 
-    write_csv(os.path.join(args.out, "mav0", "cam0", "data.csv"), left_rows)
-    write_csv(os.path.join(args.out, "mav0", "cam1", "data.csv"), right_rows)
+    # Only keep synchronized timestamps (intersection of cam0 and cam1)
+    left_map = {ts: fname for ts, fname in left_rows}
+    right_map = {ts: fname for ts, fname in right_rows}
+    common_ts = sorted(set(left_map.keys()) & set(right_map.keys()))
+
+    left_rows_sync = [(ts, left_map[ts]) for ts in common_ts]
+    right_rows_sync = [(ts, right_map[ts]) for ts in common_ts]
+
+    write_csv(os.path.join(args.out, "mav0", "cam0", "data.csv"), left_rows_sync)
+    write_csv(os.path.join(args.out, "mav0", "cam1", "data.csv"), right_rows_sync)
 
     with open(os.path.join(args.out, "timestamps.txt"), "w", encoding="utf-8") as f:
-        for ts_ns, _ in left_rows:
+        for ts_ns in common_ts:
             f.write(f"{ts_ns}\n")
 
     print(f"Left images:  {left_count}")

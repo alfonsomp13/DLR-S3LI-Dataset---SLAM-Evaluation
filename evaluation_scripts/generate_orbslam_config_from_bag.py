@@ -40,11 +40,16 @@ def main() -> int:
         print("Failed to read camera_info from bag. Check topic names.", file=sys.stderr)
         return 1
 
-    # Intrinsics from left K matrix
-    fx = left.K[0]
-    fy = left.K[4]
-    cx = left.K[2]
-    cy = left.K[5]
+    # Intrinsics from left/right K matrix
+    fx1 = left.K[0]
+    fy1 = left.K[4]
+    cx1 = left.K[2]
+    cy1 = left.K[5]
+
+    fx2 = right.K[0]
+    fy2 = right.K[4]
+    cx2 = right.K[2]
+    cy2 = right.K[5]
 
     width = left.width
     height = left.height
@@ -52,11 +57,10 @@ def main() -> int:
     # Baseline from right P matrix: P[0,3] = -fx * baseline
     # P is 3x4 row-major, so index 3 is P[0,3]
     p03 = right.P[3]
-    if fx == 0:
+    if fx1 == 0:
         print("Invalid fx from camera_info.", file=sys.stderr)
         return 1
-    baseline = -p03 / fx
-    bf = baseline * fx
+    baseline = -p03 / fx1
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
@@ -64,27 +68,44 @@ def main() -> int:
         f.write("%YAML:1.0\n")
         f.write("---\n\n")
         f.write('Camera.type: "PinHole"\n')
-        f.write(f"Camera.fx: {fx}\n")
-        f.write(f"Camera.fy: {fy}\n")
-        f.write(f"Camera.cx: {cx}\n")
-        f.write(f"Camera.cy: {cy}\n\n")
+        f.write('File.version: "1.0"\n\n')
 
-        # Assume rectified images (no distortion)
-        f.write("Camera.k1: 0.0\n")
-        f.write("Camera.k2: 0.0\n")
-        f.write("Camera.p1: 0.0\n")
-        f.write("Camera.p2: 0.0\n")
-        f.write("Camera.k3: 0.0\n\n")
+        # Camera calibration (rectified => zero distortion)
+        f.write(f"Camera1.fx: {fx1}\n")
+        f.write(f"Camera1.fy: {fy1}\n")
+        f.write(f"Camera1.cx: {cx1}\n")
+        f.write(f"Camera1.cy: {cy1}\n\n")
+        f.write("Camera1.k1: 0.0\n")
+        f.write("Camera1.k2: 0.0\n")
+        f.write("Camera1.p1: 0.0\n")
+        f.write("Camera1.p2: 0.0\n\n")
+
+        f.write(f"Camera2.fx: {fx2}\n")
+        f.write(f"Camera2.fy: {fy2}\n")
+        f.write(f"Camera2.cx: {cx2}\n")
+        f.write(f"Camera2.cy: {cy2}\n\n")
+        f.write("Camera2.k1: 0.0\n")
+        f.write("Camera2.k2: 0.0\n")
+        f.write("Camera2.p1: 0.0\n")
+        f.write("Camera2.p2: 0.0\n\n")
 
         f.write(f"Camera.width: {width}\n")
         f.write(f"Camera.height: {height}\n")
-        f.write(f"Camera.fps: {args.fps}\n")
-        f.write(f"Camera.bf: {bf}\n")
+        f.write(f"Camera.fps: {int(args.fps)}\n")
         f.write("Camera.RGB: 1\n\n")
 
+        # Stereo extrinsics (cam1 -> cam2)
+        f.write("Stereo.T_c1_c2: !!opencv-matrix\n")
+        f.write("  rows: 4\n")
+        f.write("  cols: 4\n")
+        f.write("  dt: f\n")
+        f.write(f"  data: [1,0,0,{-baseline},\n")
+        f.write("         0,1,0,0,\n")
+        f.write("         0,0,1,0,\n")
+        f.write("         0,0,0,1]\n\n")
+
         # Depth thresholding
-        f.write("ThDepth: 35.0\n")
-        f.write("DepthMapFactor: 1.0\n\n")
+        f.write("Stereo.ThDepth: 60.0\n\n")
 
         # ORB extractor parameters (defaults commonly used by ORB-SLAM3)
         f.write("ORBextractor.nFeatures: 2000\n")
@@ -96,15 +117,15 @@ def main() -> int:
         # Viewer (0 = headless)
         f.write(f"Viewer: {args.viewer}\n")
         f.write("Viewer.KeyFrameSize: 0.05\n")
-        f.write("Viewer.KeyFrameLineWidth: 1\n")
+        f.write("Viewer.KeyFrameLineWidth: 1.0\n")
         f.write("Viewer.GraphLineWidth: 0.9\n")
-        f.write("Viewer.PointSize: 2\n")
+        f.write("Viewer.PointSize: 2.0\n")
         f.write("Viewer.CameraSize: 0.08\n")
-        f.write("Viewer.CameraLineWidth: 3\n")
-        f.write("Viewer.ViewpointX: 0\n")
+        f.write("Viewer.CameraLineWidth: 3.0\n")
+        f.write("Viewer.ViewpointX: 0.0\n")
         f.write("Viewer.ViewpointY: -0.7\n")
         f.write("Viewer.ViewpointZ: -1.8\n")
-        f.write("Viewer.ViewpointF: 500\n")
+        f.write("Viewer.ViewpointF: 500.0\n")
 
     print(f"ORB-SLAM3 config written to: {args.out}")
     return 0
