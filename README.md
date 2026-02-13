@@ -148,11 +148,11 @@ To run individual SLAM systems manually:
 ### ORB-SLAM3 (Stereo)
 ```bash
 cd /workspace/ORB_SLAM3
-./Examples/Stereo/stereo_euroc \
+xvfb-run -a ./Examples/Stereo/stereo_euroc \
     Vocabulary/ORBvoc.txt \
-    /workspace/configs/orbslam3_config.yaml \
-    /workspace/dataset/s3li_traverse_1 \
-    timestamps.txt
+    /workspace/configs/orbslam_config_headless.yaml \
+    /workspace/dataset/converted/s3li_traverse_1 \
+    /workspace/dataset/converted/s3li_traverse_1/timestamps.txt
 ```
 
 ### Convert rosbag -> EuRoC (for ORB-SLAM3)
@@ -164,6 +164,19 @@ python3 /workspace/scripts/rosbag_to_euroc.py \
   --left /stereo/left/image_rect \
   --right /stereo/right/image_rect \
   --out /workspace/dataset/converted/s3li_traverse_1
+```
+
+### Create a headless ORB-SLAM3 config (from rosbag camera_info)
+The dataset does not ship a valid ORB-SLAM3 config. Generate one from the rosbag camera_info topics and disable the viewer for headless runs:
+
+```bash
+python3 /workspace/scripts/generate_orbslam_config_from_bag.py \
+  --bag /workspace/dataset/HiDrive/Bagfiles/s3li_traverse_1.bag \
+  --left-info /stereo/left/camera_info \
+  --right-info /stereo/right/camera_info \
+  --fps 30 \
+  --out /workspace/configs/orbslam_config_headless.yaml \
+  --viewer 0
 ```
 
 ### VINS-Fusion

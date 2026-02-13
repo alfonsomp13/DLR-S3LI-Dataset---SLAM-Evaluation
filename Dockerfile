@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install -y \
     libxinerama-dev \
     libxcursor-dev \
     libxi-dev \
+    xvfb \
     vim \
     htop \
     tmux \
