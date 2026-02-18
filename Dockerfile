@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-dev \
+    python3-venv \
     libopencv-dev \
     libeigen3-dev \
     libboost-all-dev \
@@ -62,11 +63,19 @@ RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu focal main" > /etc/apt/s
 # Initialize rosdep
 RUN rosdep init && rosdep update
 
-# Install Python packages
-RUN pip3 install --upgrade pip && \
-    pip3 install numpy scipy matplotlib pandas \
+# Python environment (isolated from Ubuntu system pip)
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv ${VENV_PATH}
+ENV PATH="${VENV_PATH}/bin:${PATH}"
+
+# Install Python packages (pinned where needed for Python 3.8 compatibility)
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    python -m pip install --no-cache-dir \
+    "numpy>=1.23,<1.27" \
+    "scipy>=1.9,<1.11" \
+    matplotlib pandas \
     opencv-python opencv-contrib-python \
-    pyyaml evo pyquaternion tqdm
+    pyyaml evo pyquaternion tqdm packaging
 
 # Set up workspace
 WORKDIR /workspace
@@ -134,10 +143,11 @@ RUN mkdir -p /workspace/dataset \
 # Copy evaluation scripts
 COPY evaluation_scripts/ /workspace/scripts/
 COPY configs/ /workspace/configs/
+RUN chmod +x /workspace/scripts/*.sh || true
 
 # Set up environment
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc && \
-    echo "source /workspace/catkin_ws/devel/setup.bash" >> ~/.bashrc && \
+    echo "[ -f /workspace/catkin_ws/devel/setup.bash ] && source /workspace/catkin_ws/devel/setup.bash" >> ~/.bashrc && \
     echo "export ORB_SLAM3_ROOT=/workspace/ORB_SLAM3" >> ~/.bashrc
 
 # Keep container running

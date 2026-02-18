@@ -1,0 +1,35 @@
+--------------------------------------------------------------------------------
+Loaded 4633 stamps and poses from: /workspace/results/orbslam3_eval_20260218_142333/groundtruth_eval_tum.txt
+Loaded 16881 stamps and poses from: /workspace/results/orbslam3_eval_20260218_142333/estimate_eval_tum.txt
+--------------------------------------------------------------------------------
+Synchronizing trajectories...
+Found 2618 of max. 4633 possible matching timestamps between...
+	/workspace/results/orbslam3_eval_20260218_142333/groundtruth_eval_tum.txt
+and:	/workspace/results/orbslam3_eval_20260218_142333/estimate_eval_tum.txt
+..with max. time diff.: 0.05 (s) and time offset: 0.0 (s).
+--------------------------------------------------------------------------------
+Aligning using Umeyama's method...
+Rotation of alignment:
+[[ 0.96513742 -0.19163542  0.17828524]
+ [-0.17730266  0.0224053   0.9839013 ]
+ [-0.19254487 -0.98121041 -0.01235328]]
+Translation of alignment:
+[-25.98237603 -29.55522669  -7.55428618]
+Scale correction: 1.0
+--------------------------------------------------------------------------------
+Compared 2618 absolute pose pairs.
+Calculating APE for translation part pose relation...
+--------------------------------------------------------------------------------
+APE w.r.t. translation part (m)
+(with SE(3) Umeyama alignment)
+
+       max	8.575728
+      mean	5.399375
+    median	5.439937
+       min	3.071431
+      rmse	5.518985
+       sse	79742.167624
+       std	1.142781
+
+--------------------------------------------------------------------------------
+Plotting results... 

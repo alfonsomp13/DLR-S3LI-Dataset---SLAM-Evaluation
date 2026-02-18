@@ -195,15 +195,63 @@ python3 /workspace/scripts/generate_orbslam_config_from_bag.py \
 
 ### ORB-SLAM3 (Stereo)
 ```bash
-cd /workspace/ORB_SLAM3
-xvfb-run -a ./Examples/Stereo/stereo_euroc \
-    Vocabulary/ORBvoc.txt \
-    /workspace/configs/orbslam_config_headless.yaml \
-    /workspace/dataset/converted/s3li_traverse_1 \
-    /workspace/dataset/converted/s3li_traverse_1/timestamps.txt
+bash /workspace/scripts/run_orbslam3_stereo.sh \
+    --seq-dir /workspace/dataset/converted/s3li_traverse_1 \
+    --mode headless \
+    --output-dir /workspace/results/orbslam3_s3li_traverse_1
 ```
 
 If you want the GUI viewer, run inside the container **without** `xvfb-run` and set `Viewer: 1` in the config. Note that some setups crash during viewer teardown; results are still written to disk.
+
+For GUI mode with host X11:
+```bash
+bash /workspace/scripts/run_orbslam3_stereo.sh \
+    --seq-dir /workspace/dataset/converted/s3li_traverse_1 \
+    --mode gui \
+    --output-dir /workspace/results/orbslam3_s3li_traverse_1
+```
+
+`run_s3li_evaluation.sh` now auto-configures:
+- `xhost +SI:localuser:root` (best effort)
+- host `.Xauthority` mount into the container (when available)
+
+This prevents the common runtime error:
+`Authorization required, but no authorization protocol specified`
+
+### Evaluate ORB-SLAM3 vs Ground Truth
+
+After ORB-SLAM3 finishes, evaluate trajectory error with:
+
+For `s3li_traverse_1`, ground truth is located at:
+- `/workspace/dataset/HiDrive/GT/s3li_traverse_1/baseline_xyz.pos`
+- `/workspace/dataset/HiDrive/GT/s3li_traverse_1/global_lle.pos`
+
+Convert `baseline_xyz.pos` to TUM first:
+
+```bash
+python3 /workspace/scripts/pos_to_tum.py \
+  --in-pos /workspace/dataset/HiDrive/GT/s3li_traverse_1/baseline_xyz.pos \
+  --out-tum /workspace/results/s3li_traverse_1_gt_tum.txt \
+  --mode baseline_xyz
+```
+
+```bash
+bash /workspace/scripts/evaluate_orbslam_vs_gt.sh \
+  --gt /workspace/results/s3li_traverse_1_gt_tum.txt \
+  --est /workspace/results/orbslam3_s3li_traverse_1/CameraTrajectory.txt \
+  --format tum \
+  --t-max-diff 0.05 \
+  --out-root /workspace/results
+```
+
+Note: `evaluate_orbslam_vs_gt.sh` now auto-normalizes TUM timestamps from nanoseconds to seconds (common in ORB-SLAM3 outputs) before running `evo`.
+
+This generates a timestamped folder in `/workspace/results/` with:
+- `ape.zip`, `rpe.zip` and `summary.json`
+- `ape_plot.pdf`, `rpe_plot.pdf`, `traj_overlay.pdf`
+- console logs for reproducibility
+
+If `evo` fails with `ModuleNotFoundError: No module named 'packaging'` or NumPy/SciPy compatibility warnings, rebuild the Docker image. The Dockerfile now pins compatible Python 3.8 scientific packages and installs `packaging`.
 
 ### VINS-Fusion
 ```bash

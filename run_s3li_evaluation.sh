@@ -12,6 +12,7 @@ CONTAINER_NAME="s3li_slam_eval"
 IMAGE_NAME="s3li_slam:latest"
 DATASET_DIR="./dataset"
 RESULTS_DIR="./results"
+EXTRA_DOCKER_ARGS=()
 
 # Create necessary directories
 mkdir -p $DATASET_DIR $RESULTS_DIR configs evaluation_scripts
@@ -36,6 +37,17 @@ fi
 echo "Building Docker image..."
 docker build -t $IMAGE_NAME .
 
+# Host-side X11 authorization fix for root in container.
+if [[ -n "${DISPLAY:-}" ]] && command -v xhost >/dev/null 2>&1; then
+    xhost +SI:localuser:root >/dev/null 2>&1 || true
+fi
+
+# Share host Xauthority cookie when present.
+if [[ -f "${HOME}/.Xauthority" ]]; then
+    EXTRA_DOCKER_ARGS+=("-e" "XAUTHORITY=/root/.Xauthority")
+    EXTRA_DOCKER_ARGS+=("-v" "${HOME}/.Xauthority:/root/.Xauthority:ro")
+fi
+
 # Run container
 echo "Starting container..."
 docker run -d \
@@ -49,6 +61,7 @@ docker run -d \
     -v $(pwd)/$RESULTS_DIR:/workspace/results \
     -v $(pwd)/configs:/workspace/configs \
     -v $(pwd)/evaluation_scripts:/workspace/scripts \
+    "${EXTRA_DOCKER_ARGS[@]}" \
     --shm-size=8gb \
     $IMAGE_NAME
 

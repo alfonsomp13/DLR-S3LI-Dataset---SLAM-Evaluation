@@ -1,0 +1,7 @@
+[93mInitialized new /root/.evo/settings.json[39m
+--------------------------------------------------------------------------------
+Loaded 4633 stamps and poses from: /workspace/results/s3li_traverse_1_gt_tum.txt
+Loaded 16881 stamps and poses from: /workspace/results/orbslam3_s3li_traverse_1/CameraTrajectory.txt
+--------------------------------------------------------------------------------
+Synchronizing trajectories...
+[ERROR] found no matching timestamps between /workspace/results/s3li_traverse_1_gt_tum.txt and /workspace/results/orbslam3_s3li_traverse_1/CameraTrajectory.txt with max. time diff 0.05 (s) and time offset 0.0 (s)
