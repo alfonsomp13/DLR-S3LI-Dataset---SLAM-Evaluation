@@ -10,8 +10,10 @@ EST_PATH=""
 OUT_ROOT="/workspace/results"
 RUN_NAME="orbslam3_eval_$(date +%Y%m%d_%H%M%S)"
 DELTA="1"
-DELTA_UNIT="s"
+DELTA_UNIT="f"
 TMAXDIFF=""
+TOFFSET="0.0"
+PLOT="1"
 
 usage() {
   cat <<EOF
@@ -28,8 +30,10 @@ Options:
   --out-root PATH           Root output directory (default: /workspace/results)
   --run-name NAME           Output folder name (default: timestamp-based)
   --delta VALUE             RPE delta value (default: 1)
-  --delta-unit VALUE        RPE delta unit: f|m|rad|deg|s (default: s)
+  --delta-unit VALUE        RPE delta unit: f|d|r|m (default: f)
   --t-max-diff VALUE        Max timestamp diff for association (seconds)
+  --t-offset VALUE          Constant timestamp offset added to estimate (seconds)
+  --no-plot                 Disable plotting (faster, no GUI dependencies)
   -h, --help                Show this help
 EOF
 }
@@ -44,6 +48,8 @@ while [[ $# -gt 0 ]]; do
     --delta) DELTA="$2"; shift 2 ;;
     --delta-unit) DELTA_UNIT="$2"; shift 2 ;;
     --t-max-diff) TMAXDIFF="$2"; shift 2 ;;
+    --t-offset) TOFFSET="$2"; shift 2 ;;
+    --no-plot) PLOT="0"; shift 1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -77,6 +83,7 @@ ASSOC_ARGS=()
 if [[ -n "$TMAXDIFF" ]]; then
   ASSOC_ARGS+=(--t_max_diff "$TMAXDIFF")
 fi
+ASSOC_ARGS+=(--t_offset "$TOFFSET")
 
 echo "==> Writing evaluation outputs to: $OUT_DIR"
 cp "$GT_PATH" "$OUT_DIR/groundtruth_input.txt"
@@ -135,35 +142,59 @@ PY
 fi
 
 echo "==> Running APE..."
-evo_ape "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
-  --align \
-  --verbose \
-  --plot \
-  --save_plot "$OUT_DIR/ape_plot.pdf" \
-  --save_results "$OUT_DIR/ape.zip" \
-  "${ASSOC_ARGS[@]}" \
-  | tee "$OUT_DIR/ape_console.txt"
+if [[ "$PLOT" == "1" ]]; then
+  evo_ape "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
+    --align \
+    --verbose \
+    --plot \
+    --save_plot "$OUT_DIR/ape_plot.pdf" \
+    --save_results "$OUT_DIR/ape.zip" \
+    "${ASSOC_ARGS[@]}" \
+    | tee "$OUT_DIR/ape_console.txt"
+else
+  evo_ape "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
+    --align \
+    --verbose \
+    --save_results "$OUT_DIR/ape.zip" \
+    "${ASSOC_ARGS[@]}" \
+    | tee "$OUT_DIR/ape_console.txt"
+fi
 
 echo "==> Running RPE..."
-evo_rpe "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
-  --align \
-  --verbose \
-  --delta "$DELTA" \
-  --delta_unit "$DELTA_UNIT" \
-  --plot \
-  --save_plot "$OUT_DIR/rpe_plot.pdf" \
-  --save_results "$OUT_DIR/rpe.zip" \
-  "${ASSOC_ARGS[@]}" \
-  | tee "$OUT_DIR/rpe_console.txt"
+if [[ "$PLOT" == "1" ]]; then
+  evo_rpe "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
+    --align \
+    --verbose \
+    --delta "$DELTA" \
+    --delta_unit "$DELTA_UNIT" \
+    --plot \
+    --save_plot "$OUT_DIR/rpe_plot.pdf" \
+    --save_results "$OUT_DIR/rpe.zip" \
+    "${ASSOC_ARGS[@]}" \
+    | tee "$OUT_DIR/rpe_console.txt"
+else
+  evo_rpe "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
+    --align \
+    --verbose \
+    --delta "$DELTA" \
+    --delta_unit "$DELTA_UNIT" \
+    --save_results "$OUT_DIR/rpe.zip" \
+    "${ASSOC_ARGS[@]}" \
+    | tee "$OUT_DIR/rpe_console.txt"
+fi
 
 echo "==> Saving trajectory overlay plot..."
-evo_traj "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
-  --ref="$GT_EVAL" \
-  --align \
-  --plot \
-  --save_plot "$OUT_DIR/traj_overlay.pdf" \
-  "${ASSOC_ARGS[@]}" \
-  | tee "$OUT_DIR/traj_console.txt"
+if [[ "$PLOT" == "1" ]]; then
+  evo_traj "$FORMAT" "$GT_EVAL" "$EST_EVAL" \
+    --ref="$GT_EVAL" \
+    --align \
+    --plot \
+    --save_plot "$OUT_DIR/traj_overlay.pdf" \
+    "${ASSOC_ARGS[@]}" \
+    | tee "$OUT_DIR/traj_console.txt"
+else
+  echo "plot disabled (--no-plot)" | tee "$OUT_DIR/traj_console.txt"
+fi
 
 echo "==> Exporting quick summary..."
 python3 - "$OUT_DIR" <<'PY'
