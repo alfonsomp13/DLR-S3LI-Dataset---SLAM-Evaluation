@@ -266,6 +266,31 @@ This generates a timestamped folder in `/workspace/results/` with:
 
 If `evo` fails with `ModuleNotFoundError: No module named 'packaging'` or NumPy/SciPy compatibility warnings, rebuild the Docker image. The Dockerfile now pins compatible Python 3.8 scientific packages and installs `packaging`.
 
+### Reproducible ORB Parameter Ablation
+
+Use the ablation runner to test ORB/stereo parameter variants across one or more sequences with automatic evaluation:
+
+```bash
+bash /workspace/scripts/run_orb_ablation.sh \
+  --variant-name a1_feat3000_fast15 \
+  --nfeatures 3000 \
+  --ini-fast 15 \
+  --min-fast 5 \
+  --seqs s3li_traverse_1,s3li_traverse_2 \
+  --t-max-diff 0.05 \
+  --t-offset 0.0
+```
+
+Outputs:
+- run folder: `/workspace/results/orbslam3_orb_ablation_<timestamp>_<variant>/`
+- per-sequence ORB trajectories: `orb_<seq>/CameraTrajectory.txt`
+- per-sequence evaluation artifacts: `eval_<seq>_<variant>/`
+- compact table: `summary.csv`
+
+Notes:
+- If ORB-SLAM3 exits with a late segmentation fault after writing `CameraTrajectory.txt`, the script continues and still evaluates that sequence.
+- Keep `t-max-diff` and `t-offset` fixed while tuning ORB params to isolate tracking effects.
+
 ### VINS-Fusion
 ```bash
 cd /workspace/catkin_ws
