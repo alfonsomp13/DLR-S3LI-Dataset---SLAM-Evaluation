@@ -13,7 +13,8 @@ DELTA="1"
 DELTA_UNIT="f"
 TMAXDIFF=""
 TOFFSET="0.0"
-PLOT="1"
+PLOT="0"
+PLOT_BACKEND="Agg"
 
 usage() {
   cat <<EOF
@@ -33,7 +34,9 @@ Options:
   --delta-unit VALUE        RPE delta unit: f|d|r|m (default: f)
   --t-max-diff VALUE        Max timestamp diff for association (seconds)
   --t-offset VALUE          Constant timestamp offset added to estimate (seconds)
-  --no-plot                 Disable plotting (faster, no GUI dependencies)
+  --plot                    Enable plotting (requires a valid matplotlib backend)
+  --no-plot                 Disable plotting (default, faster and headless-safe)
+  --plot-backend VALUE      Matplotlib backend for evo when plotting (default: Agg)
   -h, --help                Show this help
 EOF
 }
@@ -49,7 +52,9 @@ while [[ $# -gt 0 ]]; do
     --delta-unit) DELTA_UNIT="$2"; shift 2 ;;
     --t-max-diff) TMAXDIFF="$2"; shift 2 ;;
     --t-offset) TOFFSET="$2"; shift 2 ;;
+    --plot) PLOT="1"; shift 1 ;;
     --no-plot) PLOT="0"; shift 1 ;;
+    --plot-backend) PLOT_BACKEND="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -74,6 +79,37 @@ fi
 if ! command -v evo_ape >/dev/null 2>&1 || ! command -v evo_rpe >/dev/null 2>&1 || ! command -v evo_traj >/dev/null 2>&1; then
   echo "evo is not installed in this environment. Rebuild the Docker image." >&2
   exit 1
+fi
+
+if [[ "$PLOT" == "1" ]]; then
+  # Force a headless-safe backend in evo settings to avoid TkAgg/X11 crashes.
+  python3 - "$PLOT_BACKEND" <<'PY'
+import json
+import os
+import sys
+
+backend = sys.argv[1]
+settings_dir = os.path.join(os.path.expanduser("~"), ".evo")
+os.makedirs(settings_dir, exist_ok=True)
+settings_path = os.path.join(settings_dir, "settings.json")
+
+data = {}
+if os.path.exists(settings_path):
+    try:
+        with open(settings_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+
+data["plot_backend"] = backend
+data["plot_seaborn_enabled"] = True
+data["plot_usetex"] = False
+
+with open(settings_path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, sort_keys=True)
+
+print(f"Configured evo plot backend: {backend} ({settings_path})")
+PY
 fi
 
 OUT_DIR="${OUT_ROOT%/}/${RUN_NAME}"

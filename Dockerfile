@@ -75,7 +75,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
     "scipy>=1.9,<1.11" \
     matplotlib pandas \
     opencv-python opencv-contrib-python \
-    pyyaml evo pyquaternion tqdm packaging
+    pyyaml evo pyquaternion tqdm packaging pycryptodomex
 
 # Set up workspace
 WORKDIR /workspace

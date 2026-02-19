@@ -246,6 +246,19 @@ bash /workspace/scripts/evaluate_orbslam_vs_gt.sh \
 
 Note: `evaluate_orbslam_vs_gt.sh` now auto-normalizes TUM timestamps from nanoseconds to seconds (common in ORB-SLAM3 outputs) before running `evo`.
 
+To generate visual PDFs (`ape_plot.pdf`, `rpe_plot.pdf`, `traj_overlay.pdf`) in headless mode:
+
+```bash
+bash /workspace/scripts/evaluate_orbslam_vs_gt.sh \
+  --gt /workspace/results/s3li_traverse_1_gt_tum.txt \
+  --est /workspace/results/orbslam3_s3li_traverse_1/CameraTrajectory.txt \
+  --format tum \
+  --t-max-diff 0.05 \
+  --plot \
+  --plot-backend Agg \
+  --out-root /workspace/results
+```
+
 This generates a timestamped folder in `/workspace/results/` with:
 - `ape.zip`, `rpe.zip` and `summary.json`
 - `ape_plot.pdf`, `rpe_plot.pdf`, `traj_overlay.pdf`
